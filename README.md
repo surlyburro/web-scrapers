@@ -42,36 +42,157 @@ docker run -p 3000:3000 web-scrapers
 ## API Endpoints
 
 ### Health Check
-```
+```bash
 GET /health
 ```
 
-### List Available Scrapers
+Returns the health status of the service.
+
+```bash
+curl http://localhost:3000/health
 ```
+
+### List Available Scrapers
+```bash
 GET /scrapers
 ```
 
-### Run Predefined Scraper
+Returns a list of all predefined scraper configurations.
+
+```bash
+curl http://localhost:3000/scrapers
 ```
+
+Response:
+```json
+{
+  "scrapers": ["example-news", "wunderground-home"]
+}
+```
+
+### Run Predefined Scraper
+```bash
 POST /scrape/:name
+Content-Type: application/json
+```
+
+Run a predefined scraper by name. Optionally enable debug logging.
+
+**Examples:**
+
+```bash
+# Run Wunderground scraper without debug logging
+curl -X POST http://localhost:3000/scrape/wunderground-home
+
+# Run Wunderground scraper with debug logging
+curl -X POST http://localhost:3000/scrape/wunderground-home \
+  -H "Content-Type: application/json" \
+  -d '{"debug": true}'
+
+# Run example news scraper
+curl -X POST http://localhost:3000/scrape/example-news
+```
+
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "currentTemp": "72°",
+    "condition": "Partly Cloudy",
+    "location": "San Francisco, CA"
+  },
+  "timestamp": "2026-01-02T12:00:00.000Z",
+  "url": "https://www.wunderground.com/"
+}
 ```
 
 ### Run Custom Scraper
-```
+```bash
 POST /scrape
 Content-Type: application/json
+```
 
+Run a custom scraper with your own configuration.
+
+**Request Body:**
+```json
 {
   "url": "https://example.com",
   "waitForSelector": ".content",
+  "waitForTimeout": 2000,
   "selectors": {
     "title": "h1",
-    "paragraphs": "p"
+    "paragraphs": "p",
+    "links": "a"
   },
-  "screenshot": false
+  "screenshot": false,
+  "debug": true
 }
+```
+
+**Parameters:**
+- `url` (required): The URL to scrape
+- `waitForSelector` (optional): CSS selector to wait for before scraping
+- `waitForTimeout` (optional): Additional milliseconds to wait after page load
+- `selectors` (required): Object mapping data keys to CSS selectors
+- `screenshot` (optional): Whether to capture a screenshot (base64 encoded)
+- `debug` (optional): Enable detailed logging output
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:3000/scrape \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "waitForSelector": ".content",
+    "selectors": {
+      "title": "h1",
+      "paragraphs": "p"
+    },
+    "screenshot": false,
+    "debug": true
+  }'
 ```
 
 ## Adding New Scrapers
 
-Add your scraper configurations in `src/scrapers/` following the pattern in `example-scraper.ts`.
+To add a new site scraper:
+
+1. Create a new directory under `src/scrapers/{site-name}/`
+2. Create a configuration file (e.g., `{site-name}.ts`) with your scraper configs
+3. Export your configs in a format like:
+
+```typescript
+import { ScraperConfig } from '../../types/scraper';
+
+export const mySiteConfig: ScraperConfig = {
+  url: 'https://example.com',
+  waitForSelector: '[data-testid="content"]',
+  selectors: {
+    title: 'h1',
+    description: '.description',
+  },
+  screenshot: false,
+  headless: true,
+};
+
+export const mySiteConfigs: Record<string, ScraperConfig> = {
+  'mysite-home': mySiteConfig,
+};
+```
+
+4. Import and add to `src/scrapers/index.ts`:
+
+```typescript
+import { mySiteConfigs } from './mysite/mysite';
+
+export const scraperConfigs: Record<string, ScraperConfig> = {
+  ...exampleConfigs,
+  ...wundergroundConfigs,
+  ...mySiteConfigs,  // Add your configs here
+};
+```
+
+See [src/scrapers/wunderground/wunderground.ts](src/scrapers/wunderground/wunderground.ts) for a complete example.
