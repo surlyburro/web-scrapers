@@ -7,6 +7,7 @@ export const ScraperConfigSchema = z.object({
   selectors: z.record(z.string(), z.string()),
   screenshot: z.boolean().optional(),
   headless: z.boolean().optional(),
+  navigationTimeout: z.number().optional(),
 });
 
 export type ScraperConfig = z.infer<typeof ScraperConfigSchema>;

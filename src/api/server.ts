@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { GenericScraper } from '../core/scraper';
 import { ScraperConfigSchema } from '../types/scraper';
-import { scraperConfigs } from '../scrapers/example-scraper';
+import { scraperConfigs } from '../scrapers';
 
 const app = express();
 app.use(express.json());
