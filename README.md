@@ -76,12 +76,12 @@ POST /scrape/:name
 Content-Type: application/json
 ```
 
-Run a predefined scraper by name. Optionally enable debug logging.
+Run a predefined scraper by name. Optionally enable debug logging and/or screenshot capture.
 
 **Examples:**
 
 ```bash
-# Run Wunderground scraper without debug logging
+# Run Wunderground scraper without debug logging or screenshot
 curl -X POST http://localhost:3000/scrape/wunderground-home
 
 # Run Wunderground scraper with debug logging
@@ -89,11 +89,21 @@ curl -X POST http://localhost:3000/scrape/wunderground-home \
   -H "Content-Type: application/json" \
   -d '{"debug": true}'
 
+# Run with screenshot capture
+curl -X POST http://localhost:3000/scrape/wunderground-home \
+  -H "Content-Type: application/json" \
+  -d '{"screenshot": true}'
+
+# Run with both debug logging and screenshot
+curl -X POST http://localhost:3000/scrape/wunderground-home \
+  -H "Content-Type: application/json" \
+  -d '{"debug": true, "screenshot": true}'
+
 # Run example news scraper
 curl -X POST http://localhost:3000/scrape/example-news
 ```
 
-Response:
+Response (without screenshot):
 ```json
 {
   "success": true,
@@ -102,6 +112,21 @@ Response:
     "condition": "Partly Cloudy",
     "location": "San Francisco, CA"
   },
+  "timestamp": "2026-01-02T12:00:00.000Z",
+  "url": "https://www.wunderground.com/"
+}
+```
+
+Response (with screenshot):
+```json
+{
+  "success": true,
+  "data": {
+    "currentTemp": "72°",
+    "condition": "Partly Cloudy",
+    "location": "San Francisco, CA"
+  },
+  "screenshot": "iVBORw0KGgoAAAANSUhEUgAA...",
   "timestamp": "2026-01-02T12:00:00.000Z",
   "url": "https://www.wunderground.com/"
 }
@@ -136,7 +161,7 @@ Run a custom scraper with your own configuration.
 - `waitForSelector` (optional): CSS selector to wait for before scraping
 - `waitForTimeout` (optional): Additional milliseconds to wait after page load
 - `selectors` (required): Object mapping data keys to CSS selectors
-- `screenshot` (optional): Whether to capture a screenshot (base64 encoded)
+- `screenshot` (optional): Whether to capture a full-page screenshot (returned as base64)
 - `debug` (optional): Enable detailed logging output
 
 **Example:**
@@ -151,10 +176,22 @@ curl -X POST http://localhost:3000/scrape \
       "title": "h1",
       "paragraphs": "p"
     },
-    "screenshot": false,
+    "screenshot": true,
     "debug": true
   }'
 ```
+
+**Note on Screenshots:**
+- Screenshots are returned as base64-encoded PNG images in the `screenshot` field
+- They can be large (100KB - 2MB+) depending on page size
+- To save a screenshot from the response, decode the base64 string:
+  ```bash
+  # Using jq to extract and decode
+  curl -X POST http://localhost:3000/scrape/wunderground-home \
+    -H "Content-Type: application/json" \
+    -d '{"screenshot": true}' | \
+    jq -r '.screenshot' | base64 -d > screenshot.png
+  ```
 
 ## Adding New Scrapers
 
