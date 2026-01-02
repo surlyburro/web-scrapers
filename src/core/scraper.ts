@@ -19,16 +19,17 @@ export class GenericScraper {
 
   async scrape(config: ScraperConfig): Promise<ScraperResult> {
     const startTime = new Date().toISOString();
+    const debug = config.debug || false;
     
     try {
-      console.log(`[Scraper] Starting scrape for: ${config.url}`);
+      if (debug) console.log(`[Scraper] Starting scrape for: ${config.url}`);
       
       if (!this.browser) {
-        console.log('[Scraper] Initializing browser...');
+        if (debug) console.log('[Scraper] Initializing browser...');
         await this.initialize();
       }
 
-      console.log('[Scraper] Creating browser context...');
+      if (debug) console.log('[Scraper] Creating browser context...');
       const context = await this.browser!.newContext({
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         viewport: { width: 1920, height: 1080 },
@@ -36,17 +37,19 @@ export class GenericScraper {
       const page = await context.newPage();
 
       // Listen to console messages from the page
-      page.on('console', msg => console.log(`[Page Console] ${msg.type()}: ${msg.text()}`));
-      
-      // Listen to page errors
-      page.on('pageerror', error => console.log(`[Page Error] ${error.message}`));
-      
-      // Listen to request failures
-      page.on('requestfailed', request => 
-        console.log(`[Request Failed] ${request.url()} - ${request.failure()?.errorText}`)
-      );
+      if (debug) {
+        page.on('console', msg => console.log(`[Page Console] ${msg.type()}: ${msg.text()}`));
+        
+        // Listen to page errors
+        page.on('pageerror', error => console.log(`[Page Error] ${error.message}`));
+        
+        // Listen to request failures
+        page.on('requestfailed', request => 
+          console.log(`[Request Failed] ${request.url()} - ${request.failure()?.errorText}`)
+        );
+      }
 
-      console.log(`[Scraper] Navigating to ${config.url}...`);
+      if (debug) console.log(`[Scraper] Navigating to ${config.url}...`);
       const navStart = Date.now();
       
       // Navigate to URL with more lenient wait condition
@@ -56,25 +59,25 @@ export class GenericScraper {
       });
       
       const navDuration = Date.now() - navStart;
-      console.log(`[Scraper] Navigation completed in ${navDuration}ms`);
+      if (debug) console.log(`[Scraper] Navigation completed in ${navDuration}ms`);
 
       // Wait for specific selector or timeout
       if (config.waitForSelector) {
-        console.log(`[Scraper] Waiting for selector: ${config.waitForSelector}`);
+        if (debug) console.log(`[Scraper] Waiting for selector: ${config.waitForSelector}`);
         try {
           await page.waitForSelector(config.waitForSelector, { timeout: 30000 });
-          console.log(`[Scraper] Selector found: ${config.waitForSelector}`);
+          if (debug) console.log(`[Scraper] Selector found: ${config.waitForSelector}`);
         } catch (err) {
-          console.log(`[Scraper] WARNING: Selector not found: ${config.waitForSelector}`);
-          console.log(`[Scraper] Continuing anyway...`);
+          if (debug) console.log(`[Scraper] WARNING: Selector not found: ${config.waitForSelector}`);
+          if (debug) console.log(`[Scraper] Continuing anyway...`);
         }
       }
       if (config.waitForTimeout) {
-        console.log(`[Scraper] Waiting ${config.waitForTimeout}ms...`);
+        if (debug) console.log(`[Scraper] Waiting ${config.waitForTimeout}ms...`);
         await page.waitForTimeout(config.waitForTimeout);
       }
 
-      console.log(`[Scraper] Extracting data from ${Object.keys(config.selectors).length} selectors...`);
+      if (debug) console.log(`[Scraper] Extracting data from ${Object.keys(config.selectors).length} selectors...`);
       
       // Extract data using selectors
       const data: Record<string, any> = {};
@@ -82,19 +85,19 @@ export class GenericScraper {
         try {
           const elements = await page.$$(selector);
           if (elements.length === 0) {
-            console.log(`[Scraper] No elements found for "${key}" (${selector})`);
+            if (debug) console.log(`[Scraper] No elements found for "${key}" (${selector})`);
             data[key] = null;
           } else if (elements.length === 1) {
             data[key] = await elements[0].textContent();
-            console.log(`[Scraper] Found 1 element for "${key}"`);
+            if (debug) console.log(`[Scraper] Found 1 element for "${key}"`);
           } else {
             data[key] = await Promise.all(
               elements.map(el => el.textContent())
             );
-            console.log(`[Scraper] Found ${elements.length} elements for "${key}"`);
+            if (debug) console.log(`[Scraper] Found ${elements.length} elements for "${key}"`);
           }
         } catch (err) {
-          console.log(`[Scraper] Error extracting "${key}": ${err instanceof Error ? err.message : String(err)}`);
+          if (debug) console.log(`[Scraper] Error extracting "${key}": ${err instanceof Error ? err.message : String(err)}`);
           data[key] = null;
         }
       }
@@ -102,14 +105,14 @@ export class GenericScraper {
       // Take screenshot if requested
       let screenshotBase64: string | undefined;
       if (config.screenshot) {
-        console.log('[Scraper] Taking screenshot...');
+        if (debug) console.log('[Scraper] Taking screenshot...');
         const screenshot = await page.screenshot({ fullPage: true });
         screenshotBase64 = screenshot.toString('base64');
-        console.log(`[Scraper] Screenshot captured (${screenshot.length} bytes)`);
+        if (debug) console.log(`[Scraper] Screenshot captured (${screenshot.length} bytes)`);
       }
 
       await context.close();
-      console.log('[Scraper] Scraping completed successfully');
+      if (debug) console.log('[Scraper] Scraping completed successfully');
 
       return {
         success: true,
