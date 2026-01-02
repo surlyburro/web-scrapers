@@ -23,18 +23,19 @@ app.get('/scrapers', (req: Request, res: Response) => {
 // Run a predefined scraper by name
 app.post('/scrape/:name', async (req: Request, res: Response) => {
   const { name } = req.params;
-  const { debug, screenshot } = req.body;
+  const { debug, screenshot, htmlSource } = req.body;
   const config = scraperConfigs[name];
 
   if (!config) {
     return res.status(404).json({ error: `Scraper '${name}' not found` });
   }
 
-  // Merge debug and screenshot flags if provided
+  // Merge debug, screenshot, and htmlSource flags if provided
   const configWithOptions = {
     ...config,
     ...(debug !== undefined && { debug }),
     ...(screenshot !== undefined && { screenshot }),
+    ...(htmlSource !== undefined && { htmlSource }),
   };
 
   try {

@@ -89,6 +89,17 @@ export class GenericScraper {
             data[key] = null;
           } else if (elements.length === 1) {
             data[key] = await elements[0].textContent();
+            
+            // Special handling for temperature unit detection
+            if (key === 'tempUnit') {
+              const className = await elements[0].getAttribute('class');
+              if (className?.includes('funits')) {
+                data[key] = 'F';
+              } else if (className?.includes('cunits')) {
+                data[key] = 'C';
+              }
+            }
+            
             if (debug) console.log(`[Scraper] Found 1 element for "${key}"`);
           } else {
             data[key] = await Promise.all(
@@ -111,6 +122,14 @@ export class GenericScraper {
         if (debug) console.log(`[Scraper] Screenshot captured (${screenshot.length} bytes)`);
       }
 
+      // Capture HTML source if requested
+      let htmlSource: string | undefined;
+      if (config.htmlSource) {
+        if (debug) console.log('[Scraper] Capturing HTML source...');
+        htmlSource = await page.content();
+        if (debug) console.log(`[Scraper] HTML source captured (${htmlSource.length} characters)`);
+      }
+
       await context.close();
       if (debug) console.log('[Scraper] Scraping completed successfully');
 
@@ -118,6 +137,7 @@ export class GenericScraper {
         success: true,
         data,
         screenshot: screenshotBase64,
+        htmlSource,
         timestamp: startTime,
         url: config.url,
       };

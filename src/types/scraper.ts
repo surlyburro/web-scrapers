@@ -9,6 +9,7 @@ export const ScraperConfigSchema = z.object({
   headless: z.boolean().optional(),
   navigationTimeout: z.number().optional(),
   debug: z.boolean().optional(),
+  htmlSource: z.boolean().optional(),
 });
 
 export type ScraperConfig = z.infer<typeof ScraperConfigSchema>;
@@ -17,6 +18,7 @@ export interface ScraperResult {
   success: boolean;
   data?: Record<string, any>;
   screenshot?: string; // base64 encoded
+  htmlSource?: string; // HTML source after page load
   error?: string;
   timestamp: string;
   url: string;

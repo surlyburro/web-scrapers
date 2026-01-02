@@ -8,21 +8,11 @@ export const wundergroundHomeConfig: ScraperConfig = {
   navigationTimeout: 60000,
   selectors: {
     // Current conditions
-    currentTemp: '[data-testid="TemperatureValue"]',
-    condition: '[data-testid="wxPhrase"]',
-    feelsLike: '[data-testid="FeelsLikeSection"] [data-testid="TemperatureValue"]',
-    
-    // Additional current conditions
-    windSpeed: '[data-testid="Wind"] [data-testid="WindSpeed"]',
-    windDirection: '[data-testid="Wind"] [data-testid="WindDirection"]',
-    humidity: '[data-testid="PercentageValue"]',
-    dewPoint: '[data-testid="DewPoint"] [data-testid="TemperatureValue"]',
-    pressure: '[data-testid="PressureValue"]',
-    visibility: '[data-testid="VisibilitySection"] span',
-    uvIndex: '[data-testid="UVIndexValue"]',
+    currentTemp: 'div.cur-temp',
+    tempUnit: 'div.cur-temp.funits, div.cur-temp.cunits', // Detect F or C
     
     // Location
-    location: '[data-testid="PresentationName"]',
+    location: 'h1.condition-location',
     
     // Forecast data (array of forecast cards)
     forecastDays: '[data-testid="DailyForecast"] [data-testid="DaypartDetails"]',

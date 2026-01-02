@@ -94,10 +94,20 @@ curl -X POST http://localhost:3000/scrape/wunderground-home \
   -H "Content-Type: application/json" \
   -d '{"screenshot": true}'
 
+# Run with HTML source capture
+curl -X POST http://localhost:3000/scrape/wunderground-home \
+  -H "Content-Type: application/json" \
+  -d '{"htmlSource": true}'
+
 # Run with both debug logging and screenshot
 curl -X POST http://localhost:3000/scrape/wunderground-home \
   -H "Content-Type: application/json" \
   -d '{"debug": true, "screenshot": true}'
+
+# Run with all options
+curl -X POST http://localhost:3000/scrape/wunderground-home \
+  -H "Content-Type: application/json" \
+  -d '{"debug": true, "screenshot": true, "htmlSource": true}'
 
 # Run example news scraper
 curl -X POST http://localhost:3000/scrape/example-news
@@ -162,6 +172,7 @@ Run a custom scraper with your own configuration.
 - `waitForTimeout` (optional): Additional milliseconds to wait after page load
 - `selectors` (required): Object mapping data keys to CSS selectors
 - `screenshot` (optional): Whether to capture a full-page screenshot (returned as base64)
+- `htmlSource` (optional): Whether to capture the HTML source after page load
 - `debug` (optional): Enable detailed logging output
 
 **Example:**
@@ -177,6 +188,7 @@ curl -X POST http://localhost:3000/scrape \
       "paragraphs": "p"
     },
     "screenshot": true,
+    "htmlSource": true,
     "debug": true
   }'
 ```
@@ -191,6 +203,18 @@ curl -X POST http://localhost:3000/scrape \
     -H "Content-Type: application/json" \
     -d '{"screenshot": true}' | \
     jq -r '.screenshot' | base64 -d > screenshot.png
+  ```
+
+**Note on HTML Source:**
+- `htmlSource` captures the full HTML after JavaScript execution and page rendering
+- This is useful for debugging selector issues or understanding the page structure
+- The HTML source can be very large (100KB - 5MB+)
+- To save HTML source to a file:
+  ```bash
+  curl -X POST http://localhost:3000/scrape/wunderground-home \
+    -H "Content-Type: application/json" \
+    -d '{"htmlSource": true}' | \
+    jq -r '.htmlSource' > page-source.html
   ```
 
 ## Adding New Scrapers
