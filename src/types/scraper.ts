@@ -1,17 +1,19 @@
 import { z } from 'zod';
 
 export const InteractionSchema = z.object({
-  type: z.enum(['fill', 'click', 'waitForNavigation', 'wait', 'waitForSelector', 'type', 'keyPress']),
+  type: z.enum(['fill', 'click', 'waitForNavigation', 'wait', 'waitForSelector', 'type', 'keyPress', 'debugLog']),
   selector: z.string().optional(),
   value: z.string().optional(), // For 'fill' type, can use {param} placeholders
   paramName: z.string().optional(), // Parameter name to substitute into value
   duration: z.number().optional(), // For 'wait' type, milliseconds to wait
   key: z.string().optional(), // For 'keyPress' type, the key to press (e.g., 'Enter', 'ArrowDown')
+  message: z.string().optional(), // For 'debugLog' type, a message to log along with element contents
 });
 
 export const ScraperConfigSchema = z.object({
   url: z.string(), // Can be a URL or a template with {param} placeholders
   urlParams: z.array(z.string()).optional(), // Required parameter names for URL template
+  passThrough: z.array(z.string()).optional(), // Parameter names to pass through to response data
   interactions: z.array(InteractionSchema).optional(), // Page interactions before scraping
   waitForSelector: z.string().optional(),
   waitForTimeout: z.number().optional(),

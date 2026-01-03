@@ -37,6 +37,20 @@ export class GenericScraper {
       });
       const page = await context.newPage();
 
+      // Track last navigation URL to avoid duplicate logs
+      let lastNavigatedUrl = '';
+
+      // Listen to all page navigations
+      page.on('framenavigated', frame => {
+        if (frame === page.mainFrame()) {
+          const currentUrl = frame.url();
+          if (currentUrl !== lastNavigatedUrl) {
+            scraperLogger.info({ url: currentUrl }, 'Page navigated');
+            lastNavigatedUrl = currentUrl;
+          }
+        }
+      });
+
       // Listen to console messages from the page
       if (debug) {
         page.on('console', msg => browserLogger.debug({ type: msg.type(), text: msg.text() }, 'Page console'));
@@ -189,8 +203,26 @@ export class GenericScraper {
             if (!pressed) {
               throw new Error(`Could not find visible element for selector: ${interaction.selector}`);
             }
+          } else if (interaction.type === 'debugLog' && interaction.selector) {
+            const message = interaction.message || 'Debug log';
+            scraperLogger.info({ selector: interaction.selector }, message);
+            try {
+              const elements = await page.$$(interaction.selector);
+              const texts = await Promise.all(elements.map(async (el, idx) => {
+                const text = await el.textContent();
+                const value = await el.evaluate((node: any) => {
+                  if (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') {
+                    return node.value;
+                  }
+                  return null;
+                });
+                return { index: idx, text: text?.trim(), value };
+              }));
+              scraperLogger.info({ count: elements.length, elements: texts }, 'Element contents');
+            } catch (err) {
+              scraperLogger.error({ error: err instanceof Error ? err.message : String(err) }, 'Failed to read elements');
+            }
           } else if (interaction.type === 'waitForNavigation') {
-            if (debug) scraperLogger.debug({ url: page.url() }, 'Waiting for navigation');
             // Wait for actual URL change
             await Promise.race([
               page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 10000 }),
@@ -242,19 +274,38 @@ export class GenericScraper {
             // Special handling for temperature unit detection
             if (key === 'tempUnit') {
               const className = await elements[0].getAttribute('class');
+              const text = data[key];
+              // Check class name (homepage style: funits/cunits)
               if (className?.includes('funits')) {
                 data[key] = 'F';
               } else if (className?.includes('cunits')) {
+                data[key] = 'C';
+              }
+              // Check text content (location page style: contains °F or °C)
+              else if (text?.includes('°F') || text?.includes('F')) {
+                data[key] = 'F';
+              } else if (text?.includes('°C') || text?.includes('C')) {
                 data[key] = 'C';
               }
             }
             
             if (debug) scraperLogger.debug({ key }, 'Found 1 element');
           } else {
+            // Multiple elements found - log details about each
+            if (debug) {
+              const elementDetails = await Promise.all(
+                elements.map(async (el, idx) => {
+                  const text = await el.textContent();
+                  const isVisible = await el.isVisible();
+                  const boundingBox = await el.boundingBox();
+                  return { index: idx, text: text?.trim(), isVisible, hasBoundingBox: !!boundingBox };
+                })
+              );
+              scraperLogger.warn({ key, selector, count: elements.length, elements: elementDetails }, 'Found multiple elements for selector');
+            }
             data[key] = await Promise.all(
               elements.map(el => el.textContent())
             );
-            if (debug) scraperLogger.debug({ key, count: elements.length }, 'Found multiple elements');
           }
         } catch (err) {
           if (debug) scraperLogger.error({ key, selector, error: err instanceof Error ? err.message : String(err) }, 'Error extracting data');
@@ -281,6 +332,15 @@ export class GenericScraper {
 
       await context.close();
       if (debug) scraperLogger.info({ url: page.url() }, 'Scraping completed successfully');
+
+      // Add passThrough parameters to data if specified
+      if (config.passThrough && config.passThrough.length > 0) {
+        for (const param of config.passThrough) {
+          if ((config as any)[param] !== undefined) {
+            data[param] = (config as any)[param];
+          }
+        }
+      }
 
       return {
         success: true,
