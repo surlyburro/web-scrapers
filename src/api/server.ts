@@ -23,16 +23,36 @@ app.get('/scrapers', (req: Request, res: Response) => {
 // Run a predefined scraper by name
 app.post('/scrape/:name', async (req: Request, res: Response) => {
   const { name } = req.params;
-  const { debug, screenshot, htmlSource } = req.body;
+  const { debug, screenshot, htmlSource, ...params } = req.body;
   const config = scraperConfigs[name];
 
   if (!config) {
     return res.status(404).json({ error: `Scraper '${name}' not found` });
   }
 
+  // Check if URL parameters are required and provided
+  if (config.urlParams && config.urlParams.length > 0) {
+    const missingParams = config.urlParams.filter(param => !params[param]);
+    if (missingParams.length > 0) {
+      return res.status(400).json({ 
+        error: `Missing required URL parameters: ${missingParams.join(', ')}` 
+      });
+    }
+  }
+
+  // Substitute URL parameters if present
+  let url = config.url;
+  if (config.urlParams) {
+    for (const param of config.urlParams) {
+      url = url.replace(`{${param}}`, params[param]);
+    }
+  }
+
   // Merge debug, screenshot, and htmlSource flags if provided
   const configWithOptions = {
     ...config,
+    url,
+    ...params, // Include all params so interactions can access them
     ...(debug !== undefined && { debug }),
     ...(screenshot !== undefined && { screenshot }),
     ...(htmlSource !== undefined && { htmlSource }),

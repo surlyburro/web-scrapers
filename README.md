@@ -81,10 +81,20 @@ Run a predefined scraper by name. Optionally enable debug logging and/or screens
 **Examples:**
 
 ```bash
-# Run Wunderground scraper without debug logging or screenshot
+# Run Wunderground homepage scraper
 curl -X POST http://localhost:3000/scrape/wunderground-home
 
-# Run Wunderground scraper with debug logging
+# Run Wunderground location scraper with zipcode
+curl -X POST http://localhost:3000/scrape/wunderground-location \
+  -H "Content-Type: application/json" \
+  -d '{"zipcode": "94607"}'
+
+# Run location scraper with debug logging
+curl -X POST http://localhost:3000/scrape/wunderground-location \
+  -H "Content-Type: application/json" \
+  -d '{"zipcode": "94607", "debug": true}'
+
+# Run with debug logging
 curl -X POST http://localhost:3000/scrape/wunderground-home \
   -H "Content-Type: application/json" \
   -d '{"debug": true}'
@@ -239,8 +249,22 @@ export const mySiteConfig: ScraperConfig = {
   headless: true,
 };
 
+// Example with URL parameters
+export const mySiteLocationConfig: ScraperConfig = {
+  url: 'https://example.com/{city}/{state}',
+  urlParams: ['city', 'state'],
+  waitForSelector: '[data-testid="content"]',
+  selectors: {
+    title: 'h1',
+    description: '.description',
+  },
+  screenshot: false,
+  headless: true,
+};
+
 export const mySiteConfigs: Record<string, ScraperConfig> = {
   'mysite-home': mySiteConfig,
+  'mysite-location': mySiteLocationConfig,
 };
 ```
 
