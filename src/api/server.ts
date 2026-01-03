@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { GenericScraper } from '../core/scraper';
 import { ScraperConfigSchema } from '../types/scraper';
 import { scraperConfigs } from '../scrapers';
+import { apiLogger } from '../utils/logger';
 
 const app = express();
 app.use(express.json());
@@ -25,6 +26,8 @@ app.post('/scrape/:name', async (req: Request, res: Response) => {
   const { name } = req.params;
   const { debug, screenshot, htmlSource, ...params } = req.body;
   const config = scraperConfigs[name];
+
+  apiLogger.info({ scraper: name, params }, 'Scrape request received');
 
   if (!config) {
     return res.status(404).json({ error: `Scraper '${name}' not found` });
@@ -60,8 +63,10 @@ app.post('/scrape/:name', async (req: Request, res: Response) => {
 
   try {
     const result = await scraper.scrape(configWithOptions);
+    apiLogger.info({ scraper: name, success: result.success }, 'Scrape completed');
     res.json(result);
   } catch (error) {
+    apiLogger.error({ scraper: name, error }, 'Scrape failed');
     res.status(500).json({
       error: error instanceof Error ? error.message : String(error),
     });
@@ -70,11 +75,14 @@ app.post('/scrape/:name', async (req: Request, res: Response) => {
 
 // Run a custom scraper with provided configuration
 app.post('/scrape', async (req: Request, res: Response) => {
+  apiLogger.info({ url: req.body.url }, 'Custom scrape request received');
   try {
     const config = ScraperConfigSchema.parse(req.body);
     const result = await scraper.scrape(config);
+    apiLogger.info({ url: config.url, success: result.success }, 'Custom scrape completed');
     res.json(result);
   } catch (error) {
+    apiLogger.error({ error }, 'Custom scrape failed');
     if (error instanceof Error) {
       res.status(400).json({ error: error.message });
     } else {
@@ -87,12 +95,12 @@ export async function startServer(port: number = 3000): Promise<void> {
   await scraper.initialize();
   
   app.listen(port, () => {
-    console.log(`Scraper service listening on port ${port}`);
+    apiLogger.info({ port }, 'Scraper service started');
   });
 
   // Graceful shutdown
   process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, closing scraper...');
+    apiLogger.info('SIGTERM received, closing scraper');
     await scraper.close();
     process.exit(0);
   });

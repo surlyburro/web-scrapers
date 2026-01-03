@@ -7,8 +7,23 @@ A generic web scraping service built with Node.js, TypeScript, and Playwright.
 - Generic scraping library with configurable selectors
 - HTTP API for invoking scrapers
 - Site-specific scraper configurations
+- Structured logging with Pino
 - Docker support
 - Screenshot capability
+
+## Configuration
+
+The service can be configured via environment variables:
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+```
+
+Available variables:
+- `PORT` - Server port (default: 3000)
+- `LOG_LEVEL` - Logging level: fatal, error, warn, info, debug, trace (default: info)
+- `NODE_ENV` - Environment: development (pretty logs) or production (JSON logs)
 
 ## Getting Started
 
